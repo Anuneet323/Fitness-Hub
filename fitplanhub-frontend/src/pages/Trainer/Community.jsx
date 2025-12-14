@@ -1,11 +1,16 @@
-// src/pages/User/Community.jsx
+// src/pages/User/Community.jsx - Complete working code
 import React, { useEffect, useState } from "react";
 import { postService } from "../../services/postService";
-import { followService, followUtils } from "../../services/followService";
-import { Loader2, Heart, MessageCircle, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import { followService } from "../../services/followService";
+import { Loader2, Heart, MessageCircle, X, Plus } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { authService } from "../../services/authService";
 
 export default function UserCommunity() {
+  const navigate = useNavigate();
+  const user = authService.getCurrentUser();
+  const isTrainer = user?.role === "trainer";
+
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState("");
@@ -39,9 +44,8 @@ export default function UserCommunity() {
     loadFeed(1);
   }, []);
 
-  // like/unlike
   const handleToggleLike = async (postId) => {
-    if (likeLoading) return;
+    if (likeLoading === postId || !user) return;
     setLikeLoading(postId);
     try {
       const res = await postService.toggleLike(postId);
@@ -75,7 +79,7 @@ export default function UserCommunity() {
   };
 
   const handleToggleFollowTrainer = async (trainerId) => {
-    if (!trainerId || followLoading) return;
+    if (!trainerId || followLoading || !user) return;
     setFollowLoading(true);
     try {
       const isFollowing = !!followingMap[trainerId];
@@ -97,12 +101,23 @@ export default function UserCommunity() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="mb-5">
-        <h1 className="text-2xl font-semibold text-slate-900">Community</h1>
-        <p className="text-sm text-slate-600">
-          Discover posts from trainers you follow, in a visual feed.
-        </p>
+      {/* Header with Create Post button for trainers */}
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Community</h1>
+          <p className="text-sm text-slate-600">
+            Discover posts from trainers you follow.
+          </p>
+        </div>
+        {isTrainer && (
+          <Link
+            to="/trainer-dashboard/community/create-post"
+            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-medium shadow-sm transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            Create Post
+          </Link>
+        )}
       </div>
 
       {apiError && (
@@ -116,9 +131,11 @@ export default function UserCommunity() {
           <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
         </div>
       ) : posts.length === 0 ? (
-        <div className="rounded-2xl border border-orange-100 bg-white p-6 text-sm text-slate-600">
-          No posts in your feed yet. Follow some trainers to see their posts
-          here.
+        <div className="rounded-2xl border border-orange-100 bg-white p-6 text-sm text-slate-600 text-center">
+          No posts in your feed yet.{" "}
+          {isTrainer
+            ? "Create your first post!"
+            : "Follow some trainers to see their posts."}
         </div>
       ) : (
         <>
@@ -131,7 +148,7 @@ export default function UserCommunity() {
                 onClick={() => handleOpenPost(post)}
                 className="w-full text-left break-inside-avoid rounded-2xl border border-orange-100 bg-white hover:shadow-md transition-shadow overflow-hidden"
               >
-                {/* media */}
+                {/* Media */}
                 {Array.isArray(post.mediaUrls) && post.mediaUrls.length > 0 ? (
                   post.mediaType === "video" ? (
                     <video
@@ -150,7 +167,7 @@ export default function UserCommunity() {
                 ) : null}
 
                 <div className="p-3 space-y-2">
-                  {/* author */}
+                  {/* Author */}
                   <div className="flex items-center gap-2">
                     <div className="w-7 h-7 rounded-full bg-orange-50 overflow-hidden flex items-center justify-center text-[10px] font-semibold text-orange-600">
                       {post.authorId?.avatarUrl ? (
@@ -178,14 +195,14 @@ export default function UserCommunity() {
                     </div>
                   </div>
 
-                  {/* content snippet */}
+                  {/* Content snippet */}
                   {post.content && (
                     <p className="text-xs text-slate-700 line-clamp-3">
                       {post.content}
                     </p>
                   )}
 
-                  {/* footer */}
+                  {/* Footer */}
                   <div className="flex items-center justify-between text-[11px] text-slate-500">
                     <div className="inline-flex items-center gap-1">
                       <Heart
@@ -205,7 +222,7 @@ export default function UserCommunity() {
             ))}
           </div>
 
-          {/* pagination */}
+          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-3 pt-4 text-xs">
               <button
@@ -230,7 +247,7 @@ export default function UserCommunity() {
         </>
       )}
 
-      {/* details modal */}
+      {/* Post Details Modal */}
       {selectedPost && (
         <PostDetailsModal
           post={selectedPost}
@@ -239,6 +256,7 @@ export default function UserCommunity() {
           likeLoading={likeLoading}
           followingMap={followingMap}
           onToggleFollowTrainer={handleToggleFollowTrainer}
+          followLoading={followLoading}
         />
       )}
     </div>
@@ -252,6 +270,7 @@ function PostDetailsModal({
   likeLoading,
   followingMap,
   onToggleFollowTrainer,
+  followLoading,
 }) {
   const trainerId = post.authorId?._id;
   const isFollowing = !!followingMap[trainerId];
@@ -259,7 +278,7 @@ function PostDetailsModal({
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/60">
       <div className="relative bg-white rounded-2xl max-w-4xl w-full mx-3 max-h-[90vh] overflow-hidden flex flex-col md:flex-row">
-        {/* media */}
+        {/* Media */}
         {Array.isArray(post.mediaUrls) && post.mediaUrls.length > 0 ? (
           <div className="md:w-1/2 bg-black flex items-center justify-center">
             {post.mediaType === "video" ? (
@@ -278,17 +297,17 @@ function PostDetailsModal({
           </div>
         ) : null}
 
-        {/* info */}
+        {/* Info */}
         <div className="flex-1 flex flex-col p-4 space-y-3">
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-3 right-3 w-7 h-7 rounded-full bg-slate-900/80 text-white flex items-center justify-center"
+            className="absolute top-3 right-3 w-7 h-7 rounded-full bg-slate-900/80 text-white flex items-center justify-center hover:bg-slate-900"
           >
             <X className="w-4 h-4" />
           </button>
 
-          {/* trainer header */}
+          {/* Trainer Header */}
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-orange-50 overflow-hidden flex items-center justify-center text-[11px] font-semibold text-orange-600">
@@ -325,25 +344,26 @@ function PostDetailsModal({
               <button
                 type="button"
                 onClick={() => onToggleFollowTrainer(trainerId)}
-                className={`text-[11px] font-semibold px-3 py-1.5 rounded-full border ${
+                disabled={followLoading}
+                className={`text-[11px] font-semibold px-3 py-1.5 rounded-full border transition-all ${
                   isFollowing
                     ? "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
                     : "bg-orange-500 text-white border-orange-500 hover:bg-orange-600"
-                }`}
+                } ${followLoading ? "opacity-50 cursor-not-allowed" : ""}`}
               >
-                {isFollowing ? "Following" : "Follow"}
+                {followLoading ? "..." : isFollowing ? "Following" : "Follow"}
               </button>
             )}
           </div>
 
-          {/* content */}
+          {/* Content */}
           {post.content && (
             <p className="text-sm text-slate-800 whitespace-pre-line">
               {post.content}
             </p>
           )}
 
-          {/* hashtags */}
+          {/* Hashtags */}
           {Array.isArray(post.hashtags) && post.hashtags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {post.hashtags.map((tag) => (
@@ -357,16 +377,16 @@ function PostDetailsModal({
             </div>
           )}
 
-          {/* footer actions */}
+          {/* Footer Actions */}
           <div className="mt-auto pt-2 flex items-center justify-between text-xs text-slate-600">
             <button
               type="button"
               onClick={() => onToggleLike(post._id)}
               disabled={likeLoading === post._id}
-              className="inline-flex items-center gap-1 text-slate-700 hover:text-orange-600"
+              className="inline-flex items-center gap-1 text-slate-700 hover:text-orange-600 disabled:opacity-50"
             >
               <Heart
-                className={`w-4 h-4 ${
+                className={`w-4 h-4 transition-colors ${
                   post.isLiked ? "fill-orange-500 text-orange-500" : ""
                 }`}
               />
