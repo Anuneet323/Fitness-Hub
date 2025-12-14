@@ -1,34 +1,74 @@
-// ========================================
-// src/config/razorpay.ts
-// ========================================
 import Razorpay from "razorpay";
 import crypto from "crypto";
 
-// Initialize Razorpay instance only if credentials are provided
+// DO NOT initialize immediately - wait for env vars to load
 let razorpayInstance: Razorpay | null = null;
+let initializationAttempted = false;
+let initializationError: string | null = null;
 
-if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
-  razorpayInstance = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
-  });
-}
+// Lazy initialization - creates instance on first use
+const getRazorpayInstance = (): Razorpay | null => {
+  // If already initialized, return cached instance
+  if (initializationAttempted) {
+    return razorpayInstance;
+  }
 
-export { razorpayInstance };
+  // Mark as attempted
+  initializationAttempted = true;
+
+  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+  console.log("🔧 Attempting to initialize Razorpay...");
+  console.log("   Key ID:", keyId ? `${keyId.substring(0, 12)}...` : "MISSING");
+  console.log("   Key Secret:", keySecret ? "Present" : "MISSING");
+
+  if (!keyId || !keySecret) {
+    initializationError =
+      "Razorpay credentials missing in environment variables";
+    console.error("❌", initializationError);
+    return null;
+  }
+
+  try {
+    razorpayInstance = new Razorpay({
+      key_id: keyId,
+      key_secret: keySecret,
+    });
+    console.log("✅ Razorpay instance created successfully");
+    return razorpayInstance;
+  } catch (error: any) {
+    initializationError = error.message || "Failed to initialize Razorpay";
+    console.error("❌ Razorpay initialization failed:", error);
+    return null;
+  }
+};
+
+// Export as a getter that initializes on first access
+export const getrazorpayInstance = () => getRazorpayInstance();
+
+// For backward compatibility, export direct reference that initializes on first access
+Object.defineProperty(exports, "razorpayInstance", {
+  get: () => getRazorpayInstance(),
+});
 
 // Verify Razorpay configuration
 export const verifyRazorpayConfig = (): boolean => {
   try {
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-      console.warn(
-        "⚠️  Razorpay credentials not configured (payment features disabled)"
-      );
+    const instance = getRazorpayInstance();
+
+    if (!instance) {
+      console.warn("⚠️  Razorpay not configured");
+      if (initializationError) {
+        console.warn("   Reason:", initializationError);
+      }
       return false;
     }
+
     console.log("✅ Razorpay configured successfully");
     return true;
   } catch (error) {
-    console.error("❌ Razorpay configuration failed:", error);
+    console.error("❌ Razorpay configuration check failed:", error);
     return false;
   }
 };
@@ -40,31 +80,41 @@ export const createRazorpayOrder = async (
   receipt: string,
   notes?: Record<string, any>
 ) => {
-  try {
-    if (!razorpayInstance) {
-      throw new Error(
-        "Razorpay is not configured. Please add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to .env"
-      );
-    }
+  const instance = getRazorpayInstance();
 
+  if (!instance) {
+    const error = initializationError || "Razorpay is not configured";
+    throw new Error(error);
+  }
+
+  try {
     const options = {
-      amount: amount * 100, // Amount in paise (₹100 = 10000 paise)
+      amount: Math.round(amount * 100), // Convert to paise
       currency,
       receipt,
       notes: notes || {},
-      payment_capture: 1, // Auto capture payment
+      payment_capture: 1,
     };
 
-    const order = await razorpayInstance.orders.create(options);
+    console.log("📦 Creating Razorpay order:", {
+      amount: options.amount,
+      currency: options.currency,
+      receipt: options.receipt,
+    });
+
+    const order = await instance.orders.create(options);
+
+    console.log("✅ Order created:", order.id);
+
     return {
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
       receipt: order.receipt,
     };
-  } catch (error) {
-    console.error("Razorpay order creation error:", error);
-    throw error;
+  } catch (error: any) {
+    console.error("❌ Razorpay order creation error:", error);
+    throw new Error(error.message || "Failed to create Razorpay order");
   }
 };
 
@@ -75,27 +125,38 @@ export const verifyRazorpaySignature = (
   signature: string
 ): boolean => {
   try {
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+    if (!keySecret) {
+      throw new Error("RAZORPAY_KEY_SECRET not found in environment");
+    }
+
     const text = `${orderId}|${paymentId}`;
     const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "")
+      .createHmac("sha256", keySecret)
       .update(text)
       .digest("hex");
 
-    return expectedSignature === signature;
+    const isValid = expectedSignature === signature;
+    console.log(isValid ? "✅ Signature verified" : "❌ Signature invalid");
+
+    return isValid;
   } catch (error) {
-    console.error("Signature verification error:", error);
+    console.error("❌ Signature verification error:", error);
     return false;
   }
 };
 
 // Fetch payment details
 export const fetchPaymentDetails = async (paymentId: string) => {
-  try {
-    if (!razorpayInstance) {
-      throw new Error("Razorpay is not configured");
-    }
+  const instance = getRazorpayInstance();
 
-    const payment = await razorpayInstance.payments.fetch(paymentId);
+  if (!instance) {
+    throw new Error("Razorpay is not configured");
+  }
+
+  try {
+    const payment = await instance.payments.fetch(paymentId);
 
     const amountInRupees =
       typeof payment.amount === "number" ? payment.amount / 100 : 0;
@@ -111,7 +172,7 @@ export const fetchPaymentDetails = async (paymentId: string) => {
       createdAt: new Date(payment.created_at * 1000),
     };
   } catch (error) {
-    console.error("Error fetching payment details:", error);
+    console.error("❌ Error fetching payment details:", error);
     throw error;
   }
 };
@@ -122,19 +183,18 @@ export const refundPayment = async (
   amount?: number,
   notes?: Record<string, any>
 ) => {
-  try {
-    if (!razorpayInstance) {
-      throw new Error("Razorpay is not configured");
-    }
+  const instance = getRazorpayInstance();
 
+  if (!instance) {
+    throw new Error("Razorpay is not configured");
+  }
+
+  try {
     const refundData: any = { payment_id: paymentId };
     if (amount) refundData.amount = amount * 100;
     if (notes) refundData.notes = notes;
 
-    const refund = await razorpayInstance.payments.refund(
-      paymentId,
-      refundData
-    );
+    const refund = await instance.payments.refund(paymentId, refundData);
 
     const refundAmountInRupees =
       refund.amount && typeof refund.amount === "number"
@@ -148,7 +208,7 @@ export const refundPayment = async (
       status: refund.status,
     };
   } catch (error) {
-    console.error("Refund error:", error);
+    console.error("❌ Refund error:", error);
     throw error;
   }
 };
@@ -159,19 +219,25 @@ export const verifyWebhookSignature = (
   webhookSignature: string
 ): boolean => {
   try {
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+    if (!webhookSecret) {
+      throw new Error("RAZORPAY_WEBHOOK_SECRET not configured");
+    }
+
     const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET || "")
+      .createHmac("sha256", webhookSecret)
       .update(webhookBody)
       .digest("hex");
 
     return expectedSignature === webhookSignature;
   } catch (error) {
-    console.error("Webhook signature verification error:", error);
+    console.error("❌ Webhook signature verification error:", error);
     return false;
   }
 };
 
-// Get payment link
+// Create payment link
 export const createPaymentLink = async (
   amount: number,
   description: string,
@@ -180,11 +246,13 @@ export const createPaymentLink = async (
   customerContact: string,
   callbackUrl?: string
 ) => {
-  try {
-    if (!razorpayInstance) {
-      throw new Error("Razorpay is not configured");
-    }
+  const instance = getRazorpayInstance();
 
+  if (!instance) {
+    throw new Error("Razorpay is not configured");
+  }
+
+  try {
     const options = {
       amount: amount * 100,
       currency: "INR",
@@ -203,7 +271,7 @@ export const createPaymentLink = async (
       callback_method: "get",
     };
 
-    const paymentLink = await razorpayInstance.paymentLink.create(options);
+    const paymentLink = await instance.paymentLink.create(options);
 
     const amountInRupees =
       typeof paymentLink.amount === "number" ? paymentLink.amount / 100 : 0;
@@ -215,7 +283,7 @@ export const createPaymentLink = async (
       description: paymentLink.description,
     };
   } catch (error) {
-    console.error("Payment link creation error:", error);
+    console.error("❌ Payment link creation error:", error);
     throw error;
   }
 };

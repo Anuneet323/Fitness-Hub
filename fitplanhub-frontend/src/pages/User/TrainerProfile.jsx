@@ -1,6 +1,11 @@
 // src/pages/User/TrainerProfile.jsx
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import {
+  useParams,
+  useNavigate,
+  Link,
+  useSearchParams,
+} from "react-router-dom";
 import { followService, followUtils } from "../../services/followService";
 import {
   Loader2,
@@ -15,6 +20,7 @@ import {
 export default function TrainerProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [trainer, setTrainer] = useState(null);
   const [plans, setPlans] = useState([]);
@@ -198,7 +204,7 @@ export default function TrainerProfile() {
 
       {/* main grid */}
       <div className="grid gap-4 md:grid-cols-[1.4fr,1fr]">
-        {/* Plans */}
+        {/* Plans with full description and subscribe redirect */}
         <div className="rounded-2xl border border-orange-100 bg-white p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -220,14 +226,16 @@ export default function TrainerProfile() {
               This trainer has no public plans yet.
             </p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {plans.map((p) => (
-                <Link
+                <div
                   key={p._id}
-                  to={`/user-dashboard/plans/${p._id}`}
-                  className="flex gap-3 rounded-xl border border-orange-50 hover:border-orange-200 hover:bg-orange-50/40 p-2"
+                  className="rounded-xl border border-orange-50 hover:border-orange-200 hover:bg-orange-50/40 p-3 flex gap-3"
                 >
-                  <div className="w-14 h-14 rounded-lg overflow-hidden bg-orange-50 flex items-center justify-center">
+                  <Link
+                    to={`/user-dashboard/plans/${p._id}`}
+                    className="w-16 h-16 rounded-lg overflow-hidden bg-orange-50 flex items-center justify-center shrink-0"
+                  >
                     {p.thumbnail ? (
                       <img
                         src={p.thumbnail}
@@ -237,11 +245,33 @@ export default function TrainerProfile() {
                     ) : (
                       <Dumbbell className="w-6 h-6 text-orange-400" />
                     )}
-                  </div>
+                  </Link>
+
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-slate-900 truncate">
-                      {p.title}
-                    </p>
+                    <div className="flex items-start justify-between gap-2">
+                      <Link
+                        to={`/user-dashboard/plans/${p._id}`}
+                        className="text-xs font-semibold text-slate-900 hover:text-orange-600 truncate"
+                      >
+                        {p.title}
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          navigate(`/user-dashboard/plans/${p._id}`)
+                        }
+                        className="text-[11px] font-semibold text-white bg-orange-500 hover:bg-orange-600 px-3 py-1 rounded-full"
+                      >
+                        View & Subscribe
+                      </button>
+                    </div>
+
+                    {p.description && (
+                      <p className="mt-0.5 text-[11px] text-slate-600 line-clamp-3">
+                        {p.description}
+                      </p>
+                    )}
+
                     <p className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-2">
                       <span>
                         ₹{p.discountPrice || p.price}
@@ -263,19 +293,34 @@ export default function TrainerProfile() {
                       <span>{p.totalSubscribers || 0} enrolled</span>
                     </p>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Posts / Activity */}
+        {/* Posts / Activity – show more description and link to full community feed for this trainer */}
         <div className="rounded-2xl border border-orange-100 bg-white p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <MessageCircle className="w-4 h-4 text-orange-500" />
-            <h2 className="text-sm font-semibold text-slate-900">
-              Recent posts
-            </h2>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <MessageCircle className="w-4 h-4 text-orange-500" />
+              <h2 className="text-sm font-semibold text-slate-900">
+                Recent posts
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  `/user-dashboard/community?trainerId=${encodeURIComponent(
+                    trainer._id
+                  )}`
+                )
+              }
+              className="text-[11px] font-semibold text-orange-600 hover:text-orange-700"
+            >
+              View all
+            </button>
           </div>
 
           {posts.length === 0 ? (
@@ -289,7 +334,7 @@ export default function TrainerProfile() {
                   key={post._id}
                   className="rounded-xl border border-orange-50 bg-orange-50/40 p-2 text-xs text-slate-700"
                 >
-                  <p className="line-clamp-3">{post.content}</p>
+                  <p className="line-clamp-4">{post.content}</p>
                   <div className="mt-1 flex items-center gap-2 text-[10px] text-slate-500">
                     <Users className="w-3 h-3 text-slate-400" />
                     <span>{post.likesCount || 0} likes</span>

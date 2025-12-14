@@ -63,9 +63,9 @@ export default function UserPlanDetails() {
     setSubSuccess("");
 
     try {
-      // Step 1: Create Razorpay order
-      const amount = (plan.discountPrice || plan.price) ?? 0;
-      const orderData = await subscriptionService.createOrder(plan._id, amount);
+      
+      const amount = plan.discountPrice ?? plan.price ?? 0;
+      const orderData = await subscriptionService.createOrder(plan._id, amount); // CHANGED: plan.id → plan._id
 
       if (!orderData.orderId) {
         throw new Error("Failed to create payment order");
@@ -80,39 +80,31 @@ export default function UserPlanDetails() {
         description: `Subscribe to ${orderData.planDetails.title}`,
         order_id: orderData.orderId,
         prefill: {
-          name: "User", // You can get this from user context
+          name: "User",
           email: "user@example.com",
           contact: "9999999999",
         },
-        theme: {
-          color: "#f97316", // orange-500
-        },
-        handler: async (response) => {
-          // Step 3: Verify payment on backend
-          const verifyData = await subscriptionService.verifyPayment({
-            razorpay_order_id: response.razorpay_order_id,
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_signature: response.razorpay_signature,
-            planId: plan._id,
-          });
-
-          if (verifyData.success) {
-            setSubSuccess("Subscription created successfully! 🎉");
-            // Optionally refresh plan data or navigate
-            setTimeout(() => {
-              navigate("/user-dashboard");
-            }, 2000);
-          }
-        },
-        modal: {
-          ondismiss: () => {
-            console.log("Payment cancelled");
-            setSubmitting(false);
-          },
-        },
+        theme: { color: "#f97316" },
       });
 
-      // This won't be reached as handler manages the flow
+      // Step 3: Verify payment
+      // ❌ WRONG: razorpayorderid (wrong property names)
+      // ✅ CORRECT: razorpay_order_id (with underscores to match backend)
+      const verifyData = await subscriptionService.verifyPayment({
+        razorpay_order_id: paymentResponse.razorpay_order_id, // CHANGED: added underscores
+        razorpay_payment_id: paymentResponse.razorpay_payment_id, // CHANGED: added underscores
+        razorpay_signature: paymentResponse.razorpay_signature, // CHANGED: added underscores
+        planId: plan._id, // CHANGED: plan.id → plan._id
+      });
+
+      if (!verifyData.success) {
+        throw new Error(verifyData.message || "Payment verification failed");
+      }
+
+      setSubSuccess("Subscription created successfully!");
+      setTimeout(() => {
+        navigate("/user-dashboard");
+      }, 2000);
     } catch (error) {
       console.error("Subscription error:", error);
       setApiError(error.message || "Payment failed. Please try again.");

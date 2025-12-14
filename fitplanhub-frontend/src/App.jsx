@@ -8,7 +8,9 @@ import {
 } from "react-router-dom";
 
 import Landing from "./pages/Root/Landing";
+import TrainerCommunity from "./pages/Trainer/Community";
 import UserSubscriptions from "./pages/User/UserSubscriptions";
+import UserCommunity from "./pages/User/Community";
 import CreatePost from "./pages/Trainer/CreatePost";
 import TrainersBrowse from "./pages/User/TrainersBrowse";
 import TrainerProfile from "./pages/User/TrainerProfile";
@@ -26,6 +28,7 @@ import Clients from "./pages/Trainer/Clients";
 import Signup from "./pages/Auth/Signup";
 import NotFound from "./pages/System/NotFound";
 import Login from "./pages/Auth/Login";
+import HowToUse from "./pages/System/HowToUse";
 import { DashboardLayout } from "./components/Layout/DashboardLayout";
 import { PublicLayout } from "./components/Layout/PublicLayout";
 
@@ -42,6 +45,7 @@ function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/plans" element={<PublicPlans />} />
           <Route path="/plans/:id" element={<PlanDetails />} />
+          <Route path="/how-to-use" element={<HowToUse />} />
         </Route>
 
         {/* Auth pages WITHOUT navbar */}
@@ -51,6 +55,12 @@ function App() {
         {/* Dashboards WITHOUT navbar, but with dashboard layout */}
         <Route element={<DashboardLayout />}>
           {/* trainer */}
+          <Route
+            path="/trainer-dashboard/community"
+            element={<TrainerCommunity />}
+          />
+          <Route path="/user-dashboard/community" element={<UserCommunity />} />
+
           <Route path="/trainer-dashboard/plans" element={<TrainerPlans />} />
           <Route
             path="/user-dashboard/progress"

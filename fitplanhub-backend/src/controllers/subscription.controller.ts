@@ -1,12 +1,11 @@
 // ========================================
-// src/controllers/subscription.controller.ts
+// src/controllers/subscription.controller.ts - FULLY CORRECTED
 // ========================================
 import { Request, Response } from "express";
-import crypto from "crypto";
 import { Subscription } from "../models/Subscription.model";
 import { Plan } from "../models/Plan.model";
 import {
-  razorpayInstance,
+  getrazorpayInstance,
   createRazorpayOrder,
   verifyRazorpaySignature,
   fetchPaymentDetails,
@@ -16,17 +15,25 @@ import {
 export const createOrder = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
 
     const { planId, amount } = req.body;
 
     const plan = await Plan.findById(planId);
     if (!plan) {
-      return res.status(404).json({ message: "Plan not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Plan not found",
+      });
     }
 
-    // Check if Razorpay is configured
+    // Use the getter function to get Razorpay instance
+    const razorpayInstance = getrazorpayInstance();
+
     if (!razorpayInstance) {
       return res.status(500).json({
         success: false,
@@ -34,10 +41,15 @@ export const createOrder = async (req: Request, res: Response) => {
       });
     }
 
+    // Generate a short receipt ID (max 40 characters for Razorpay)
+    const timestamp = Date.now().toString().slice(-10); // Last 10 digits
+    const userIdShort = req.user.userId.toString().slice(-8); // Last 8 chars
+    const receipt = `rcpt_${timestamp}_${userIdShort}`; // Total: ~24 chars
+
     const options = {
       amount: Math.round(amount * 100), // Convert to paise
       currency: "INR",
-      receipt: `receipt_${Date.now()}_${req.user.userId}`,
+      receipt: receipt,
       notes: {
         userId: req.user.userId,
         planId: planId,
@@ -45,11 +57,11 @@ export const createOrder = async (req: Request, res: Response) => {
       },
     };
 
-    // Use the config function
+    // Use the createRazorpayOrder helper function with shortened receipt
     const order = await createRazorpayOrder(
       amount,
       "INR",
-      options.receipt,
+      receipt, // Use the shortened receipt
       options.notes
     );
 
@@ -204,14 +216,20 @@ export const verifyPayment = async (req: Request, res: Response) => {
 export const createSubscription = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
 
     const { planId, paymentId, orderId, amount } = req.body;
 
     const plan = await Plan.findById(planId);
     if (!plan) {
-      return res.status(404).json({ message: "Plan not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Plan not found",
+      });
     }
 
     const startDate = new Date();
@@ -240,11 +258,14 @@ export const createSubscription = async (req: Request, res: Response) => {
 
     await Plan.findByIdAndUpdate(planId, { $inc: { totalSubscribers: 1 } });
 
-    res
-      .status(201)
-      .json({ message: "Subscription created successfully", subscription });
+    res.status(201).json({
+      success: true,
+      message: "Subscription created successfully",
+      subscription,
+    });
   } catch (error: any) {
     res.status(500).json({
+      success: false,
       message: "Server error",
       error: error.message || "Unknown error",
     });
@@ -255,12 +276,17 @@ export const createSubscription = async (req: Request, res: Response) => {
 export const getPaymentDetails = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
 
     const { orderId } = req.params;
 
-    // Check if Razorpay is configured
+    // Use the getter function to check Razorpay configuration
+    const razorpayInstance = getrazorpayInstance();
+
     if (!razorpayInstance) {
       return res.status(500).json({
         success: false,
@@ -268,7 +294,6 @@ export const getPaymentDetails = async (req: Request, res: Response) => {
       });
     }
 
-    // Use the config function to fetch payment details
     try {
       // First, get the order to find payment ID
       const order = await razorpayInstance.orders.fetch(orderId);
@@ -277,9 +302,7 @@ export const getPaymentDetails = async (req: Request, res: Response) => {
       let paymentDetails = null;
 
       if (payments.items && payments.items.length > 0) {
-        // Get the first payment
         const paymentId = payments.items[0].id;
-        // Use the config function to fetch detailed payment info
         paymentDetails = await fetchPaymentDetails(paymentId);
       }
 
@@ -314,7 +337,10 @@ export const getPaymentDetails = async (req: Request, res: Response) => {
 export const getMySubscriptions = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
 
     const subscriptions = await Subscription.find({ userId: req.user.userId })
@@ -367,6 +393,7 @@ export const getMySubscriptions = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     res.status(500).json({
+      success: false,
       message: "Server error",
       error: error.message || "Unknown error",
     });
@@ -377,7 +404,10 @@ export const getMySubscriptions = async (req: Request, res: Response) => {
 export const getSubscriptionById = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
 
     const { id } = req.params;
@@ -387,7 +417,10 @@ export const getSubscriptionById = async (req: Request, res: Response) => {
       .populate("userId", "name email avatarUrl");
 
     if (!subscription) {
-      return res.status(404).json({ message: "Subscription not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Subscription not found",
+      });
     }
 
     // Check authorization
@@ -395,7 +428,10 @@ export const getSubscriptionById = async (req: Request, res: Response) => {
     const isTrainer = subscription.trainerId._id.toString() === req.user.userId;
 
     if (!isUser && !isTrainer) {
-      return res.status(403).json({ message: "Unauthorized" });
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
 
     // Check if subscription has expired
@@ -410,6 +446,7 @@ export const getSubscriptionById = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     res.status(500).json({
+      success: false,
       message: "Server error",
       error: error.message || "Unknown error",
     });
@@ -420,38 +457,50 @@ export const getSubscriptionById = async (req: Request, res: Response) => {
 export const cancelSubscription = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
 
     const { id } = req.params;
     const { reason } = req.body;
 
     if (!reason) {
-      return res
-        .status(400)
-        .json({ message: "Cancellation reason is required" });
+      return res.status(400).json({
+        success: false,
+        message: "Cancellation reason is required",
+      });
     }
 
     const subscription = await Subscription.findById(id);
     if (!subscription) {
-      return res.status(404).json({ message: "Subscription not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Subscription not found",
+      });
     }
 
     if (subscription.userId.toString() !== req.user.userId) {
-      return res.status(403).json({ message: "Unauthorized" });
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
 
     // Check if subscription is already cancelled or expired
     if (subscription.status === "cancelled") {
-      return res
-        .status(400)
-        .json({ message: "Subscription is already cancelled" });
+      return res.status(400).json({
+        success: false,
+        message: "Subscription is already cancelled",
+      });
     }
 
     if (subscription.status === "expired") {
-      return res
-        .status(400)
-        .json({ message: "Cannot cancel an expired subscription" });
+      return res.status(400).json({
+        success: false,
+        message: "Cannot cancel an expired subscription",
+      });
     }
 
     subscription.status = "cancelled";
@@ -471,6 +520,7 @@ export const cancelSubscription = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     res.status(500).json({
+      success: false,
       message: "Server error",
       error: error.message || "Unknown error",
     });
@@ -481,64 +531,118 @@ export const cancelSubscription = async (req: Request, res: Response) => {
 export const getTrainerSubscriptions = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    if (req.user.role !== "trainer") {
-      return res.status(403).json({ message: "Only trainers can access this" });
-    }
-
-    const subscriptions = await Subscription.find({
-      trainerId: req.user.userId,
-    })
-      .populate("userId", "name email avatarUrl phone")
-      .populate("planId", "title thumbnail price duration durationUnit")
-      .sort({ createdAt: -1 });
-
-    const now = new Date();
-    const activeSubscriptions = subscriptions.filter(
-      (sub) => sub.status === "active" && sub.endDate > now
-    );
-    const expiredSubscriptions = subscriptions.filter(
-      (sub) => sub.status === "active" && sub.endDate <= now
-    );
-
-    // Update expired subscriptions
-    if (expiredSubscriptions.length > 0) {
-      const expiredIds = expiredSubscriptions.map((sub) => sub._id);
-      const expiredIdStrings = expiredSubscriptions.map((sub) =>
-        sub._id.toString()
-      );
-
-      await Subscription.updateMany(
-        { _id: { $in: expiredIds } },
-        { $set: { status: "expired" } }
-      );
-
-      // Update the local array for response
-      subscriptions.forEach((sub) => {
-        if (expiredIdStrings.includes(sub._id.toString())) {
-          sub.status = "expired";
-        }
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: User not authenticated",
       });
     }
 
+    if (req.user.role !== "trainer") {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: Only trainers can access this endpoint",
+      });
+    }
+
+    const trainerId = req.user.userId.toString();
+    const mongoose = await import("mongoose");
+    const isValidObjectId = mongoose.Types.ObjectId.isValid(trainerId);
+
+    let query;
+    if (isValidObjectId) {
+      query = { trainerId: new mongoose.Types.ObjectId(trainerId) };
+    } else {
+      query = { trainerId: trainerId };
+    }
+
+    const subscriptions = await Subscription.find(query)
+      .populate({
+        path: "userId",
+        select: "name email avatarUrl phone",
+        model: "User",
+      })
+      .populate({
+        path: "planId",
+        select: "title thumbnail price duration durationUnit",
+        model: "Plan",
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (!subscriptions || subscriptions.length === 0) {
+      return res.json({
+        success: true,
+        subscriptions: [],
+        summary: {
+          total: 0,
+          active: 0,
+          cancelled: 0,
+          expired: 0,
+          totalRevenue: 0,
+        },
+        message: "No subscriptions found for this trainer",
+      });
+    }
+
+    const now = new Date();
+    const subscriptionUpdates = [];
+    const updatedSubscriptions = [...subscriptions];
+
+    for (let i = 0; i < updatedSubscriptions.length; i++) {
+      const subscription = updatedSubscriptions[i];
+
+      if (
+        subscription.status === "active" &&
+        new Date(subscription.endDate) <= now
+      ) {
+        subscriptionUpdates.push(subscription._id);
+        updatedSubscriptions[i].status = "expired";
+      }
+    }
+
+    if (subscriptionUpdates.length > 0) {
+      try {
+        await Subscription.updateMany(
+          { _id: { $in: subscriptionUpdates } },
+          { $set: { status: "expired" } }
+        );
+      } catch (updateError) {
+        console.error("Error updating expired subscriptions:", updateError);
+      }
+    }
+
+    const nowForStats = new Date();
+    const activeSubscriptions = updatedSubscriptions.filter(
+      (sub) => sub.status === "active" && new Date(sub.endDate) > nowForStats
+    );
+    const cancelledSubscriptions = updatedSubscriptions.filter(
+      (sub) => sub.status === "cancelled"
+    );
+    const expiredSubscriptions = updatedSubscriptions.filter(
+      (sub) => sub.status === "expired"
+    );
+
+    const totalRevenue = updatedSubscriptions
+      .filter((sub) => sub.paymentStatus === "paid")
+      .reduce((sum, sub) => sum + (sub.amount || 0), 0);
+
     res.json({
       success: true,
-      subscriptions,
+      subscriptions: updatedSubscriptions,
       summary: {
-        total: subscriptions.length,
+        total: updatedSubscriptions.length,
         active: activeSubscriptions.length,
-        cancelled: subscriptions.filter((sub) => sub.status === "cancelled")
-          .length,
+        cancelled: cancelledSubscriptions.length,
         expired: expiredSubscriptions.length,
-        totalRevenue: subscriptions.reduce((sum, sub) => sum + sub.amount, 0),
+        totalRevenue: totalRevenue,
       },
     });
   } catch (error: any) {
+    console.error("getTrainerSubscriptions ERROR:", error);
     res.status(500).json({
-      message: "Server error",
-      error: error.message || "Unknown error",
+      success: false,
+      message: "Internal server error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -547,7 +651,10 @@ export const getTrainerSubscriptions = async (req: Request, res: Response) => {
 export const checkUserSubscription = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
 
     const { planId } = req.params;
