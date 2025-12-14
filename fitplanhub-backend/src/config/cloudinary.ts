@@ -1,11 +1,28 @@
+// ========================================
+// src/config/cloudinary.ts - FIXED
+// ========================================
+import * as dotenv from "dotenv";
 import { v2 as cloudinary } from "cloudinary";
 
+// Load environment variables
+dotenv.config();
+
+// Configure Cloudinary
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "",
-  api_key: process.env.CLOUDINARY_API_KEY || "",
-  api_secret: process.env.CLOUDINARY_API_SECRET || "",
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
   secure: true,
 });
+
+// Debug: Log configuration status (remove in production)
+if (process.env.NODE_ENV === "development") {
+  console.log("📸 Cloudinary Config:", {
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY ? "✅ Set" : "❌ Missing",
+    api_secret: process.env.CLOUDINARY_API_SECRET ? "✅ Set" : "❌ Missing",
+  });
+}
 
 export const verifyCloudinaryConfig = (): boolean => {
   const hasCredentials =
@@ -15,12 +32,12 @@ export const verifyCloudinaryConfig = (): boolean => {
 
   if (!hasCredentials) {
     console.warn(
-      "Cloudinary credentials not configured (file upload features disabled)"
+      "⚠️  Cloudinary credentials not configured (file upload features disabled)"
     );
     return false;
   }
 
-  console.log("Cloudinary configured successfully");
+  console.log("✅ Cloudinary configured successfully");
   return true;
 };
 
@@ -80,7 +97,7 @@ export const cloudinaryUploadOptions = {
 
   video: {
     folder: `${process.env.CLOUDINARY_FOLDER || "fitplanhub"}/videos`,
-    resource_type: "video",
+    resource_type: "video" as const,
     allowed_formats: ["mp4", "mov", "avi", "webm"],
     transformation: [{ quality: "auto", fetch_format: "auto" }],
   },
@@ -103,15 +120,23 @@ export const uploadToCloudinary = async (
     throw new Error("Cloudinary is not configured");
   }
 
-  const result = await cloudinary.uploader.upload(filePath, options);
-  return {
-    url: result.secure_url,
-    publicId: result.public_id,
-    format: result.format,
-    width: result.width,
-    height: result.height,
-    bytes: result.bytes,
-  };
+  try {
+    console.log("🔄 Uploading to Cloudinary:", filePath);
+    const result = await cloudinary.uploader.upload(filePath, options);
+    console.log("✅ Upload successful:", result.secure_url);
+
+    return {
+      url: result.secure_url,
+      publicId: result.public_id,
+      format: result.format,
+      width: result.width,
+      height: result.height,
+      bytes: result.bytes,
+    };
+  } catch (error: any) {
+    console.error("❌ Cloudinary upload failed:", error.message);
+    throw error;
+  }
 };
 
 export const deleteFromCloudinary = async (

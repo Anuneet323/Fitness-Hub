@@ -9,6 +9,9 @@ import {
 
 import Landing from "./pages/Root/Landing";
 import UserSubscriptions from "./pages/User/UserSubscriptions";
+import CreatePost from "./pages/Trainer/CreatePost";
+import TrainersBrowse from "./pages/User/TrainersBrowse";
+import TrainerProfile from "./pages/User/TrainerProfile";
 import UserProgress from "./pages/User/UserProgress";
 import TrainerCreatePlan from "./pages/Trainer/CreatePlan";
 import PublicPlans from "./pages/Plans/PublicPlans";
@@ -56,6 +59,16 @@ function App() {
           <Route
             path="/trainer-dashboard/progress"
             element={<ProgressOverview />}
+          />
+          <Route path="/user-dashboard/trainers" element={<TrainersBrowse />} />
+
+          <Route
+            path="/user-dashboard/trainers/:id"
+            element={<TrainerProfile />}
+          />
+          <Route
+            path="/trainer-dashboard/community/create-post"
+            element={<CreatePost />}
           />
 
           <Route

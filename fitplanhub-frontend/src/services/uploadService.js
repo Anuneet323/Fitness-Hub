@@ -1,44 +1,59 @@
-
-
 // ============================================
-// src/services/uploadService.js - File Uploads
+// src/services/uploadService.js - File Uploads (UPDATED)
 // ============================================
 
 import api from "./api";
 
 export const uploadService = {
-  // Upload avatar
+  // Upload avatar -> /uploads/avatar
   uploadAvatar: async (file) => {
     const formData = new FormData();
     formData.append("file", file);
     const response = await api.post("/uploads/avatar", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
-    return response.data;
+    return response.data; // { success, url, publicId, ... }
   },
 
-  // Upload cover image
-  uploadCover: async (file) => {
+  // Upload cover image -> /uploads/cover-image (if your route is /uploads/cover use that)
+  uploadCoverImage: async (file) => {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await api.post("/uploads/cover", formData, {
+    const response = await api.post("/uploads/cover-image", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return response.data;
   },
 
-  // Upload plan media
+  // Upload plan thumbnail -> /uploads/plan-thumbnail
+  uploadPlanThumbnail: async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await api.post("/uploads/plan-thumbnail", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  },
+
+  // Upload plan image -> /uploads/plan-image
+  uploadPlanImage: async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await api.post("/uploads/plan-image", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  },
+
+  // Upload plan media (generic wrapper: thumbnail / image)
   uploadPlanMedia: async (file, type = "image") => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("type", type);
-    const response = await api.post("/uploads/plan-media", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    return response.data;
+    if (type === "thumbnail") {
+      return uploadService.uploadPlanThumbnail(file);
+    }
+    return uploadService.uploadPlanImage(file);
   },
 
-  // Upload post media
+  // Upload post media -> /uploads/post-media
   uploadPostMedia: async (file) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -48,9 +63,31 @@ export const uploadService = {
     return response.data;
   },
 
-  // Delete file
-  deleteFile: async (publicId) => {
-    const response = await api.delete(`/uploads/${publicId}`);
+  // Upload video -> /uploads/video
+  uploadVideo: async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await api.post("/uploads/video", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  },
+
+  // Upload multiple files -> /uploads/multiple
+  uploadMultiple: async (files) => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+    const response = await api.post("/uploads/multiple", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data; // { files: [...] }
+  },
+
+  // Delete file -> DELETE /uploads/:publicId with body { resourceType }
+  deleteFile: async (publicId, resourceType = "image") => {
+    const response = await api.delete(`/uploads/${publicId}`, {
+      data: { resourceType },
+    });
     return response.data;
   },
 };

@@ -1,8 +1,9 @@
 // src/pages/Trainer/CreatePlan.jsx
 import React, { useState } from "react";
 import { planService } from "../../services/planService";
+import { uploadService } from "../../services/uploadService";
 import { useNavigate } from "react-router-dom";
-import { Dumbbell } from "lucide-react";
+import { Dumbbell, UploadCloud } from "lucide-react";
 
 const initialState = {
   title: "",
@@ -13,6 +14,7 @@ const initialState = {
   discountPrice: "",
   duration: "",
   durationUnit: "days",
+  thumbnail: "",
 };
 
 const categories = [
@@ -74,6 +76,7 @@ export default function TrainerCreatePlan() {
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
   const [success, setSuccess] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   const validateField = (name, value, data = formData) => {
     if (!validators[name]) return "";
@@ -103,13 +106,34 @@ export default function TrainerCreatePlan() {
     setApiError("");
     setSuccess("");
 
-    // live validation for changed field
     if (validators[name]) {
       const msg = validateField(name, nextValue, nextForm);
       setErrors((prev) => ({
         ...prev,
         [name]: msg,
       }));
+    }
+  };
+
+  // upload thumbnail image using uploadService
+  const handleThumbnailChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setApiError("");
+    setSuccess("");
+
+    try {
+      const res = await uploadService.uploadPlanMedia(file, "image");
+      const url = res.url || res.secureUrl || res.secure_url;
+      if (!url) throw new Error("No URL returned from upload.");
+      setFormData((prev) => ({ ...prev, thumbnail: url }));
+    } catch (err) {
+      console.error("Upload error:", err);
+      setApiError("Failed to upload image. Please try again.");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -132,6 +156,7 @@ export default function TrainerCreatePlan() {
         : undefined,
       duration: Number(formData.duration),
       durationUnit: formData.durationUnit,
+      thumbnail: formData.thumbnail || undefined,
     };
 
     setLoading(true);
@@ -367,20 +392,50 @@ export default function TrainerCreatePlan() {
           </div>
         </div>
 
+        {/* Thumbnail upload + preview */}
+        <div>
+          <label className="block text-sm text-slate-700 mb-1">
+            Plan cover image
+          </label>
+          <div className="flex items-center gap-3">
+            <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer">
+              <UploadCloud className="w-4 h-4 text-orange-500" />
+              <span>{uploading ? "Uploading..." : "Upload image"}</span>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleThumbnailChange}
+                disabled={uploading || loading}
+              />
+            </label>
+            {formData.thumbnail && (
+              <img
+                src={formData.thumbnail}
+                alt="Plan cover"
+                className="w-16 h-16 rounded-lg object-cover border border-slate-200"
+              />
+            )}
+          </div>
+          <p className="mt-1 text-[11px] text-slate-500">
+            Recommended ratio 4:3, max ~2MB. This image will show on plan cards.
+          </p>
+        </div>
+
         {/* Submit */}
         <div className="flex justify-end gap-3 pt-2">
           <button
             type="button"
             onClick={() => navigate(-1)}
             className="px-4 py-2 rounded-lg border border-slate-200 text-sm text-slate-700 hover:bg-slate-50"
-            disabled={loading}
+            disabled={loading || uploading}
           >
             Cancel
           </button>
           <button
             type="submit"
             className="px-5 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-sm font-semibold text-white shadow-md disabled:opacity-60"
-            disabled={loading}
+            disabled={loading || uploading}
           >
             {loading ? "Creating..." : "Create plan"}
           </button>
