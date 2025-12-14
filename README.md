@@ -65,21 +65,21 @@ Before you begin, make sure you have the following installed on your system:
 **Step 1: Clone the repository**
 
 ```bash
-git clone https://github.com/yourusername/fitplanhub.git
+git clone https://github.com/Shishir2405/Fit_Plan_Hub.git
 cd fitplanhub
 ```
 
 **Step 2: Install Backend Dependencies**
 
 ```bash
-cd backend
+cd fitplanhub-backend
 npm install
 ```
 
 **Step 3: Install Frontend Dependencies**
 
 ```bash
-cd ../frontend
+cd fitplanhub-frontend
 npm install
 ```
 
@@ -87,7 +87,7 @@ npm install
 
 ### Backend Environment Setup
 
-Create a `.env` file in the `backend` directory with the following configuration:
+Create a `.env` file in the `fitplanhub-backend` directory with the following configuration:
 
 ```env
 # Server
@@ -138,7 +138,7 @@ ENABLE_CRON_JOBS=true
 
 ### Frontend Environment Setup
 
-Create a `.env` file in the `frontend` directory:
+Create a `.env` file in the `fitplanhub-frontend` directory:
 
 ```env
 VITE_API_URL=http://localhost:5001/api
@@ -176,7 +176,7 @@ mongosh
 Open a terminal window and run:
 
 ```bash
-cd backend
+cd fitplanhub-backend
 npm run dev
 ```
 
@@ -194,7 +194,7 @@ MongoDB connected successfully
 Open another terminal window and run:
 
 ```bash
-cd frontend
+cd fitplanhub-frontend
 npm run dev
 ```
 
@@ -221,7 +221,7 @@ You can now:
 
 ```
 fitplanhub/
-├── backend/
+├── fitplanhub-backend/
 │   ├── src/
 │   │   ├── models/          # MongoDB schemas
 │   │   ├── routes/          # API routes
@@ -232,7 +232,7 @@ fitplanhub/
 │   ├── .env                 # Backend environment variables
 │   └── package.json
 │
-├── frontend/
+├── fitplanhub-frontend/
 │   ├── src/
 │   │   ├── pages/           # Page components
 │   │   │   ├── Root/        # Landing page
