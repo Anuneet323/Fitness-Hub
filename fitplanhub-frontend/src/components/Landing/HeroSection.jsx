@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 function cn(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -177,12 +178,62 @@ export default function FitPlanHubHero() {
           animate="visible"
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
         >
-          <button className="px-8 py-3 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm sm:text-base shadow-[0_18px_45px_rgba(249,115,22,0.55)] transition-colors">
-            Start your free plan
-          </button>
-          <button className="px-8 py-3 rounded-full border border-orange-200 text-orange-700 hover:border-orange-400 hover:text-orange-800 text-sm sm:text-base font-medium bg-white/80 backdrop-blur-sm shadow-sm transition-colors">
-            I&apos;m a trainer
-          </button>
+          <Link
+            to="/signup"
+            className="px-8 py-3 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm sm:text-base shadow-[0_18px_45px_rgba(249,115,22,0.55)] transition-colors"
+          >
+            Start your journey
+          </Link>
+          <Link
+            to="/how-to-use"
+            className="relative px-8 py-3 rounded-full border border-orange-200 text-orange-700 hover:border-orange-400 hover:text-orange-800 text-sm sm:text-base font-medium bg-white/80 backdrop-blur-sm shadow-sm transition-colors overflow-hidden group"
+          >
+            <span className="relative z-10">Learn how to use</span>
+            {/* Ripple effect layer 1 */}
+            <motion.span
+              className="absolute inset-0 bg-gradient-to-r from-orange-400/20 to-amber-400/20 rounded-full"
+              initial={{ scale: 0, opacity: 0.8 }}
+              animate={{
+                scale: [0, 2.5],
+                opacity: [0.8, 0],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Number.POSITIVE_INFINITY,
+                ease: "easeOut",
+              }}
+            />
+            {/* Ripple effect layer 2 */}
+            <motion.span
+              className="absolute inset-0 bg-gradient-to-r from-orange-400/15 to-amber-400/15 rounded-full"
+              initial={{ scale: 0, opacity: 0.6 }}
+              animate={{
+                scale: [0, 2.5],
+                opacity: [0.6, 0],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Number.POSITIVE_INFINITY,
+                ease: "easeOut",
+                delay: 0.5,
+              }}
+            />
+            {/* Ripple effect layer 3 */}
+            <motion.span
+              className="absolute inset-0 bg-gradient-to-r from-amber-300/10 to-orange-300/10 rounded-full"
+              initial={{ scale: 0, opacity: 0.4 }}
+              animate={{
+                scale: [0, 2.5],
+                opacity: [0.4, 0],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Number.POSITIVE_INFINITY,
+                ease: "easeOut",
+                delay: 1,
+              }}
+            />
+          </Link>
         </motion.div>
       </div>
 
