@@ -1,52 +1,47 @@
-// ========================================
-// src/config/database.ts
-// ========================================
+// Database connection - MongoDB setup 
 import mongoose from "mongoose";
 
 export const connectDB = async (): Promise<void> => {
   try {
     const mongoURI = process.env.MONGO_URI;
-
+    
     if (!mongoURI) {
-      throw new Error("MONGO_URI is not defined in environment variables");
+      throw new Error("MONGO_URI missing from env");
     }
 
-    const conn = await mongoose.connect(mongoURI, {
-      // These options are no longer needed in Mongoose 6+
-      // but included for backward compatibility
-      // useNewUrlParser: true,
-      // useUnifiedTopology: true,
-    });
+    // Connect to MongoDB Atlas/local
+    const conn = await mongoose.connect(mongoURI);
+    
+    console.log('MongoDB connected:', conn.connection.host);
+    console.log('DB name:', conn.connection.name);
 
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    console.log(`📊 Database Name: ${conn.connection.name}`);
-
-    // Handle connection events
+    // Connection event handlers
     mongoose.connection.on("error", (err) => {
-      console.error("❌ MongoDB connection error:", err);
+      console.error('DB connection error:', err);
     });
 
     mongoose.connection.on("disconnected", () => {
-      console.warn("⚠️  MongoDB disconnected. Attempting to reconnect...");
+      console.warn('DB disconnected - reconnecting...');
     });
 
     mongoose.connection.on("reconnected", () => {
-      console.log("✅ MongoDB reconnected successfully");
+      console.log('DB reconnected');
     });
 
-    // Graceful shutdown
+    // Cleanup on shutdown (Ctrl+C)
     process.on("SIGINT", async () => {
       await mongoose.connection.close();
-      console.log("MongoDB connection closed due to app termination");
+      console.log('DB connection closed');
       process.exit(0);
     });
+
   } catch (error) {
-    console.error("❌ Error connecting to MongoDB:", error);
+    console.error('Failed to connect to MongoDB:', error);
     process.exit(1);
   }
 };
 
-// Database health check
+// Quick health check for API routes
 export const checkDatabaseHealth = async (): Promise<boolean> => {
   try {
     if (mongoose.connection.readyState === 1) {
@@ -55,33 +50,32 @@ export const checkDatabaseHealth = async (): Promise<boolean> => {
         await db.admin().ping();
         return true;
       }
-      return false;
     }
     return false;
   } catch (error) {
-    console.error("Database health check failed:", error);
+    console.error('DB health check failed:', error);
     return false;
   }
 };
 
-// Get database stats
+// Get basic DB stats - useful for admin dashboard
 export const getDatabaseStats = async () => {
   try {
     const db = mongoose.connection.db;
     if (!db) {
-      console.error("Database connection not established");
+      console.error('No DB connection');
       return null;
     }
 
     const stats = await db.stats();
     return {
       collections: stats.collections,
-      dataSize: (stats.dataSize / (1024 * 1024)).toFixed(2) + " MB",
+      dataSize: `${(stats.dataSize / (1024 * 1024)).toFixed(2)} MB`,
       indexes: stats.indexes,
-      indexSize: (stats.indexSize / (1024 * 1024)).toFixed(2) + " MB",
+      indexSize: `${(stats.indexSize / (1024 * 1024)).toFixed(2)} MB`,
     };
   } catch (error) {
-    console.error("Error getting database stats:", error);
+    console.error('DB stats error:', error);
     return null;
   }
 };

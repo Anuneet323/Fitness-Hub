@@ -1,6 +1,4 @@
-// ========================================
-// src/server.ts
-// ========================================
+// Server startup
 import * as http from "http";
 import * as dotenv from "dotenv";
 import app from "./app";
@@ -11,75 +9,47 @@ import { verifyEmailConfig } from "./config/email";
 import { initializeSocket } from "./socket/socket";
 import { startScheduler } from "./jobs/scheduler";
 
-// Load environment variables
 dotenv.config();
 
-// Create HTTP server
 const server = http.createServer(app);
-
-// Initialize Socket.IO
 initializeSocket(server);
 
 const PORT = process.env.PORT || 5000;
 
-// Start server
 const startServer = async () => {
   try {
-    // Connect to database
     await connectDB();
-
-    // Verify external service configurations
     verifyCloudinaryConfig();
     verifyRazorpayConfig();
     verifyEmailConfig();
-
-    // Start cron jobs
     startScheduler();
 
-    // Start listening
     server.listen(PORT, () => {
-      console.log(`
-╔═══════════════════════════════════════════════════════╗
-║                                                       ║
-║   🚀 FitPlanHub Backend Server                       ║
-║                                                       ║
-║   📡 Server running on: http://localhost:${PORT}     ║
-║   🌍 Environment: ${
-        process.env.NODE_ENV || "development"
-      }                      ║
-║   📊 API Documentation: http://localhost:${PORT}/api ║
-║                                                       ║
-╚═══════════════════════════════════════════════════════╝
-      `);
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Env: ${process.env.NODE_ENV || "development"}`);
     });
 
-    // Handle graceful shutdown
+    // Graceful shutdown
     process.on("SIGTERM", () => {
-      console.log("SIGTERM received. Shutting down gracefully...");
+      console.log("Shutting down gracefully...");
       server.close(() => {
-        console.log("Process terminated");
+        console.log("Server closed");
         process.exit(0);
       });
     });
   } catch (error) {
-    console.error("❌ Failed to start server:", error);
+    console.error("Server failed to start:", error);
     process.exit(1);
   }
 };
 
-// Handle unhandled promise rejections
 process.on("unhandledRejection", (err: Error) => {
-  console.error("UNHANDLED REJECTION! 💥 Shutting down...");
-  console.error(err.name, err.message);
-  server.close(() => {
-    process.exit(1);
-  });
+  console.error("Unhandled rejection:", err);
+  server.close(() => process.exit(1));
 });
 
-// Handle uncaught exceptions
 process.on("uncaughtException", (err: Error) => {
-  console.error("UNCAUGHT EXCEPTION! 💥 Shutting down...");
-  console.error(err.name, err.message);
+  console.error("Uncaught exception:", err);
   process.exit(1);
 });
 

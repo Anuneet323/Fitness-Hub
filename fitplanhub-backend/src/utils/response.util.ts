@@ -1,7 +1,5 @@
-// ========================================
-// src/utils/response.util.ts
-// ========================================
-import { Response } from 'express';
+// API response helpers
+import { Response } from "express";
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -22,13 +20,13 @@ export const successResponse = <T>(
   message: string,
   data?: T,
   statusCode: number = 200,
-  meta?: ApiResponse['meta']
+  meta?: ApiResponse["meta"]
 ): Response => {
   const response: ApiResponse<T> = {
     success: true,
     message,
     data,
-    ...(meta && { meta })
+    ...(meta && { meta }),
   };
   return res.status(statusCode).json(response);
 };
@@ -44,7 +42,7 @@ export const errorResponse = (
     success: false,
     message,
     ...(error && { error }),
-    ...(errors && { errors })
+    ...(errors && { errors }),
   };
   return res.status(statusCode).json(response);
 };
@@ -61,6 +59,6 @@ export const paginatedResponse = <T>(
     page,
     limit,
     total,
-    totalPages: Math.ceil(total / limit)
+    totalPages: Math.ceil(total / limit),
   });
 };

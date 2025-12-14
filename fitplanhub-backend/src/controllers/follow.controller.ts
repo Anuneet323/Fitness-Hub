@@ -1,12 +1,10 @@
-// ========================================
-// src/controllers/follow.controller.ts - UPDATED
-// ========================================
+// Follow controller
 import { Request, Response } from "express";
 import { Follow } from "../models/Follow.model";
 import { User } from "../models/User.model";
 import { Plan } from "../models/Plan.model";
 import { Post } from "../models/Post.model";
-import { createNotification } from "../controllers/notification.controller";
+import { createNotification } from "../services/notification.service";
 
 export const followUser = async (req: Request, res: Response) => {
   try {
@@ -29,9 +27,8 @@ export const followUser = async (req: Request, res: Response) => {
       followerId: req.user.userId,
       followingId: userId,
     });
-
     if (existingFollow) {
-      return res.status(400).json({ message: "Already following this user" });
+      return res.status(400).json({ message: "Already following" });
     }
 
     const follow = await Follow.create({
@@ -39,31 +36,23 @@ export const followUser = async (req: Request, res: Response) => {
       followingId: userId,
     });
 
-    // Update follower/following counts
     await User.findByIdAndUpdate(req.user.userId, {
       $inc: { followingCount: 1 },
     });
-    await User.findByIdAndUpdate(userId, {
-      $inc: { followersCount: 1 },
-    });
+    await User.findByIdAndUpdate(userId, { $inc: { followersCount: 1 } });
 
-    // Create notification
     await createNotification({
-      userId: userId,
+      userId,
       type: "follow",
       title: "New Follower",
-      message: `${userToFollow.name} started following you`,
+      message: "Someone started following you",
       fromUserId: req.user.userId,
       link: `/profile/${req.user.userId}`,
     });
 
-    res.status(201).json({
-      success: true,
-      message: "Successfully followed user",
-      follow,
-    });
+    res.status(201).json({ message: "Followed user", follow });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -84,20 +73,14 @@ export const unfollowUser = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Not following this user" });
     }
 
-    // Update follower/following counts
     await User.findByIdAndUpdate(req.user.userId, {
       $inc: { followingCount: -1 },
     });
-    await User.findByIdAndUpdate(userId, {
-      $inc: { followersCount: -1 },
-    });
+    await User.findByIdAndUpdate(userId, { $inc: { followersCount: -1 } });
 
-    res.json({
-      success: true,
-      message: "Successfully unfollowed user",
-    });
+    res.json({ message: "Unfollowed user" });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -114,14 +97,12 @@ export const getFollowers = async (req: Request, res: Response) => {
 
     const total = await Follow.countDocuments({ followingId: userId });
 
-    // Check if current user is following any of these followers
     if (req.user) {
       const followerIds = followers.map((f: any) => f.followerId._id);
       const currentUserFollowing = await Follow.find({
         followerId: req.user.userId,
         followingId: { $in: followerIds },
       });
-
       const followingMap = new Set(
         currentUserFollowing.map((f) => f.followingId.toString())
       );
@@ -133,7 +114,6 @@ export const getFollowers = async (req: Request, res: Response) => {
       }));
 
       return res.json({
-        success: true,
         followers: followersWithStatus,
         totalPages: Math.ceil(total / Number(limit)),
         currentPage: Number(page),
@@ -142,7 +122,6 @@ export const getFollowers = async (req: Request, res: Response) => {
     }
 
     res.json({
-      success: true,
       followers: followers.map((f: any) => ({
         ...f.followerId.toObject(),
         followedAt: f.createdAt,
@@ -152,7 +131,7 @@ export const getFollowers = async (req: Request, res: Response) => {
       total,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -170,7 +149,6 @@ export const getFollowing = async (req: Request, res: Response) => {
     const total = await Follow.countDocuments({ followerId: userId });
 
     res.json({
-      success: true,
       following: following.map((f: any) => ({
         ...f.followingId.toObject(),
         followedAt: f.createdAt,
@@ -180,15 +158,14 @@ export const getFollowing = async (req: Request, res: Response) => {
       total,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// Check if current user is following a specific user
 export const checkFollowStatus = async (req: Request, res: Response) => {
   try {
     if (!req.user) {
-      return res.json({ success: true, isFollowing: false });
+      return res.json({ isFollowing: false });
     }
 
     const { userId } = req.params;
@@ -199,16 +176,14 @@ export const checkFollowStatus = async (req: Request, res: Response) => {
     });
 
     res.json({
-      success: true,
       isFollowing: !!follow,
       followedAt: follow?.createdAt,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// Get all trainers with optional filters
 export const getAllTrainers = async (req: Request, res: Response) => {
   try {
     const {
@@ -222,17 +197,8 @@ export const getAllTrainers = async (req: Request, res: Response) => {
 
     const query: any = { role: "trainer", isActive: true };
 
-    // Filter by specialization
-    if (specialization) {
-      query.specializations = { $in: [specialization] };
-    }
-
-    // Filter by minimum experience
-    if (minExperience) {
-      query.experience = { $gte: Number(minExperience) };
-    }
-
-    // Search by name, bio, or specializations
+    if (specialization) query.specializations = { $in: [specialization] };
+    if (minExperience) query.experience = { $gte: Number(minExperience) };
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
@@ -241,17 +207,11 @@ export const getAllTrainers = async (req: Request, res: Response) => {
       ];
     }
 
-    // Sorting options
-    let sortOption: any = {};
-    if (sortBy === "experience") {
-      sortOption = { experience: -1 };
-    } else if (sortBy === "followers") {
-      sortOption = { followersCount: -1 };
-    } else if (sortBy === "popular") {
+    let sortOption: any = { createdAt: -1 };
+    if (sortBy === "experience") sortOption = { experience: -1 };
+    else if (sortBy === "followers") sortOption = { followersCount: -1 };
+    else if (sortBy === "popular")
       sortOption = { followersCount: -1, postsCount: -1 };
-    } else {
-      sortOption = { createdAt: -1 };
-    }
 
     const trainers = await User.find(query)
       .select("-passwordHash -resetPasswordToken -resetPasswordExpire")
@@ -261,14 +221,12 @@ export const getAllTrainers = async (req: Request, res: Response) => {
 
     const total = await User.countDocuments(query);
 
-    // If user is authenticated, check follow status
     if (req.user) {
       const trainerIds = trainers.map((t) => t._id);
       const follows = await Follow.find({
         followerId: req.user.userId,
         followingId: { $in: trainerIds },
       });
-
       const followMap = new Set(follows.map((f) => f.followingId.toString()));
 
       const trainersWithFollowStatus = trainers.map((trainer) => ({
@@ -277,7 +235,6 @@ export const getAllTrainers = async (req: Request, res: Response) => {
       }));
 
       return res.json({
-        success: true,
         trainers: trainersWithFollowStatus,
         totalPages: Math.ceil(total / Number(limit)),
         currentPage: Number(page),
@@ -286,18 +243,16 @@ export const getAllTrainers = async (req: Request, res: Response) => {
     }
 
     res.json({
-      success: true,
       trainers,
       totalPages: Math.ceil(total / Number(limit)),
       currentPage: Number(page),
       total,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// Get trainer profile by ID with detailed info
 export const getTrainerProfile = async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
@@ -312,36 +267,23 @@ export const getTrainerProfile = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Trainer not found" });
     }
 
-    // Get trainer's plans
-    const plans = await Plan.find({
-      trainerId: userId,
-      isActive: true,
-    })
-      .select("title thumbnail price discountPrice category averageRating totalSubscribers")
+    const plans = await Plan.find({ trainerId: userId, isActive: true })
+      .select(
+        "title thumbnail price discountPrice category averageRating totalSubscribers"
+      )
       .limit(6)
       .sort({ totalSubscribers: -1 });
 
-    // Get trainer's recent posts
-    const posts = await Post.find({
-      authorId: userId,
-      isPublic: true,
-    })
+    const posts = await Post.find({ authorId: userId, isPublic: true })
       .select("content mediaUrls likesCount commentsCount createdAt")
       .limit(6)
       .sort({ createdAt: -1 });
 
-    // Get stats
-    const plansCount = await Plan.countDocuments({
-      trainerId: userId,
-      isActive: true,
-    });
+    const [plansCount, postsCount] = await Promise.all([
+      Plan.countDocuments({ trainerId: userId, isActive: true }),
+      Post.countDocuments({ authorId: userId, isPublic: true }),
+    ]);
 
-    const postsCount = await Post.countDocuments({
-      authorId: userId,
-      isPublic: true,
-    });
-
-    // Check if current user is following this trainer
     let isFollowing = false;
     if (req.user) {
       const follow = await Follow.findOne({
@@ -352,7 +294,6 @@ export const getTrainerProfile = async (req: Request, res: Response) => {
     }
 
     res.json({
-      success: true,
       trainer: {
         ...trainer.toObject(),
         isFollowing,
@@ -367,6 +308,6 @@ export const getTrainerProfile = async (req: Request, res: Response) => {
       posts,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };

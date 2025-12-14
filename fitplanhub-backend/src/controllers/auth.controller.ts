@@ -1,6 +1,4 @@
-// ========================================
-// src/controllers/auth.controller.ts
-// ========================================
+// Auth controller
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -13,7 +11,7 @@ export const signup = async (req: Request, res: Response) => {
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: "Email already registered" });
+      return res.status(400).json({ message: "Email already exists" });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -24,17 +22,14 @@ export const signup = async (req: Request, res: Response) => {
       role: role || "user",
     });
 
-    const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret) {
-      throw new Error("JWT_SECRET is not defined");
-    }
-
-    const token = jwt.sign({ userId: user._id, role: user.role }, jwtSecret, {
-      expiresIn: "7d",
-    });
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET!,
+      { expiresIn: "7d" }
+    );
 
     res.status(201).json({
-      message: "User registered successfully",
+      message: "User created",
       token,
       user: {
         id: user._id,
@@ -44,7 +39,7 @@ export const signup = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -53,26 +48,18 @@ export const login = async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch) {
+    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
     user.lastLogin = new Date();
     await user.save();
 
-    const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret) {
-      throw new Error("JWT_SECRET is not defined");
-    }
-
-    const token = jwt.sign({ userId: user._id, role: user.role }, jwtSecret, {
-      expiresIn: "7d",
-    });
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET!,
+      { expiresIn: "7d" }
+    );
 
     res.json({
       message: "Login successful",
@@ -86,7 +73,7 @@ export const login = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -102,7 +89,7 @@ export const getProfile = async (req: Request, res: Response) => {
     }
     res.json({ user });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -122,9 +109,9 @@ export const updateProfile = async (req: Request, res: Response) => {
       { new: true, runValidators: true }
     ).select("-passwordHash");
 
-    res.json({ message: "Profile updated successfully", user });
+    res.json({ message: "Profile updated", user });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -142,15 +129,13 @@ export const forgotPassword = async (req: Request, res: Response) => {
       .createHash("sha256")
       .update(resetToken)
       .digest("hex");
-    user.resetPasswordExpire = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+    user.resetPasswordExpire = new Date(Date.now() + 30 * 60 * 1000);
     await user.save();
 
-    // TODO: Send email with reset link
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
-
-    res.json({ message: "Password reset email sent", resetUrl });
+    res.json({ message: "Reset email sent", resetUrl });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -165,7 +150,7 @@ export const resetPassword = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(400).json({ message: "Invalid or expired token" });
+      return res.status(400).json({ message: "Invalid token" });
     }
 
     user.passwordHash = await bcrypt.hash(newPassword, 10);
@@ -173,8 +158,8 @@ export const resetPassword = async (req: Request, res: Response) => {
     user.resetPasswordExpire = undefined;
     await user.save();
 
-    res.json({ message: "Password reset successful" });
+    res.json({ message: "Password reset" });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };

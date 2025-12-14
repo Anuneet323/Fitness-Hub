@@ -1,6 +1,4 @@
-// ========================================
-// src/routes/index.ts
-// ========================================
+// Main API routes
 import { Router } from "express";
 import authRoutes from "./auth.routes";
 import planRoutes from "./plan.routes";
@@ -14,7 +12,6 @@ import uploadRoutes from "./upload.routes";
 
 const router = Router();
 
-// Mount all routes
 router.use("/auth", authRoutes);
 router.use("/plans", planRoutes);
 router.use("/subscriptions", subscriptionRoutes);
@@ -25,33 +22,19 @@ router.use("/progress", progressRoutes);
 router.use("/notifications", notificationRoutes);
 router.use("/uploads", uploadRoutes);
 
-// Root API endpoint
 router.get("/", (req, res) => {
   res.json({
     status: "OK",
-    message: "🎯 FitPlanHub API v1.0.0",
+    message: "API v1.0.0",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    endpoints: {
-      auth: "/api/auth",
-      plans: "/api/plans",
-      subscriptions: "/api/subscriptions",
-      follow: "/api/follow",
-      posts: "/api/posts",
-      reviews: "/api/reviews",
-      progress: "/api/progress",
-      notifications: "/api/notifications",
-      uploads: "/api/uploads",
-      health: "/api/health",
-    },
   });
 });
 
-// Health check endpoint
 router.get("/health", (req, res) => {
   res.json({
     status: "OK",
-    message: "FitPlanHub API is running",
+    message: "API running",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
   });

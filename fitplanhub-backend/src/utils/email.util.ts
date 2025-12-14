@@ -1,6 +1,3 @@
-// ========================================
-// src/utils/email.util.ts
-// ========================================
 export const generateEmailTemplate = (
   title: string,
   content: string,
@@ -30,11 +27,15 @@ export const generateEmailTemplate = (
         </div>
         <div class="content">
           ${content}
-          ${buttonText && buttonUrl ? `
+          ${
+            buttonText && buttonUrl
+              ? `
             <div style="text-align: center;">
               <a href="${buttonUrl}" class="button">${buttonText}</a>
             </div>
-          ` : ''}
+          `
+              : ""
+          }
         </div>
         <div class="footer">
           <p>© 2025 FitPlanHub. All rights reserved.</p>

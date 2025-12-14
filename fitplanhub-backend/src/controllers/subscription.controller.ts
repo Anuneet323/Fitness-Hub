@@ -1,6 +1,4 @@
-// ========================================
-// src/controllers/subscription.controller.ts - FULLY CORRECTED
-// ========================================
+
 import { Request, Response } from "express";
 import { Subscription } from "../models/Subscription.model";
 import { Plan } from "../models/Plan.model";

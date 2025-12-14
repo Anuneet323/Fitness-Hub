@@ -1,13 +1,11 @@
-// ========================================
-// src/config/cloudinary.ts - FIXED
-// ========================================
-import * as dotenv from "dotenv";
-import { v2 as cloudinary } from "cloudinary";
+// Cloudinary config - handles file uploads 
+import { v2 as cloudinary } from 'cloudinary';
 
-// Load environment variables
+// Load env vars
+import * as dotenv from "dotenv";
 dotenv.config();
 
-// Configure Cloudinary
+// Basic Cloudinary setup
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -15,32 +13,23 @@ cloudinary.config({
   secure: true,
 });
 
-// Debug: Log configuration status (remove in production)
-if (process.env.NODE_ENV === "development") {
-  console.log("📸 Cloudinary Config:", {
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY ? "✅ Set" : "❌ Missing",
-    api_secret: process.env.CLOUDINARY_API_SECRET ? "✅ Set" : "❌ Missing",
-  });
-}
-
+// Check if config is working (dev only)
 export const verifyCloudinaryConfig = (): boolean => {
-  const hasCredentials =
+  const hasCredentials = 
     process.env.CLOUDINARY_CLOUD_NAME &&
     process.env.CLOUDINARY_API_KEY &&
     process.env.CLOUDINARY_API_SECRET;
 
   if (!hasCredentials) {
-    console.warn(
-      "⚠️  Cloudinary credentials not configured (file upload features disabled)"
-    );
+    console.warn('Cloudinary credentials missing - uploads disabled');
     return false;
   }
-
-  console.log("✅ Cloudinary configured successfully");
+  
+  console.log('Cloudinary config OK');
   return true;
 };
 
+// Quick config check
 export const isCloudinaryConfigured = (): boolean => {
   return !!(
     process.env.CLOUDINARY_CLOUD_NAME &&
@@ -49,82 +38,57 @@ export const isCloudinaryConfigured = (): boolean => {
   );
 };
 
+// Upload presets for different file types
 export const cloudinaryUploadOptions = {
   avatar: {
-    folder: `${process.env.CLOUDINARY_FOLDER || "fitplanhub"}/avatars`,
+    folder: `${process.env.CLOUDINARY_FOLDER || "hris"}/avatars`,
     transformation: [
       { width: 400, height: 400, crop: "fill", gravity: "face" },
-      { quality: "auto", fetch_format: "auto" },
+      { quality: "auto", fetch_format: "auto" }
     ],
     allowed_formats: ["jpg", "png", "jpeg", "webp"],
   },
-
+  
   coverImage: {
-    folder: `${process.env.CLOUDINARY_FOLDER || "fitplanhub"}/covers`,
+    folder: `${process.env.CLOUDINARY_FOLDER || "hris"}/covers`,
     transformation: [
       { width: 1200, height: 400, crop: "fill" },
-      { quality: "auto", fetch_format: "auto" },
+      { quality: "auto", fetch_format: "auto" }
     ],
     allowed_formats: ["jpg", "png", "jpeg", "webp"],
   },
-
-  planThumbnail: {
-    folder: `${process.env.CLOUDINARY_FOLDER || "fitplanhub"}/plans/thumbnails`,
+  
+  // Employee docs, product images
+  document: {
+    folder: `${process.env.CLOUDINARY_FOLDER || "hris"}/documents`,
+    resource_type: "auto" as const,
+    allowed_formats: ["pdf", "jpg", "png", "jpeg", "webp"],
+  },
+  
+  productImage: {
+    folder: `${process.env.CLOUDINARY_FOLDER || "hris"}/products`,
     transformation: [
       { width: 800, height: 600, crop: "fill" },
-      { quality: "auto", fetch_format: "auto" },
+      { quality: "auto", fetch_format: "auto" }
     ],
     allowed_formats: ["jpg", "png", "jpeg", "webp"],
-  },
-
-  planImage: {
-    folder: `${process.env.CLOUDINARY_FOLDER || "fitplanhub"}/plans/images`,
-    transformation: [
-      { width: 1200, crop: "limit" },
-      { quality: "auto", fetch_format: "auto" },
-    ],
-    allowed_formats: ["jpg", "png", "jpeg", "webp"],
-  },
-
-  postMedia: {
-    folder: `${process.env.CLOUDINARY_FOLDER || "fitplanhub"}/posts`,
-    transformation: [
-      { width: 1080, crop: "limit" },
-      { quality: "auto", fetch_format: "auto" },
-    ],
-    allowed_formats: ["jpg", "png", "jpeg", "webp", "gif"],
-  },
-
-  video: {
-    folder: `${process.env.CLOUDINARY_FOLDER || "fitplanhub"}/videos`,
-    resource_type: "video" as const,
-    allowed_formats: ["mp4", "mov", "avi", "webm"],
-    transformation: [{ quality: "auto", fetch_format: "auto" }],
-  },
-
-  progressImage: {
-    folder: `${process.env.CLOUDINARY_FOLDER || "fitplanhub"}/progress`,
-    transformation: [
-      { width: 800, crop: "limit" },
-      { quality: "auto", fetch_format: "auto" },
-    ],
-    allowed_formats: ["jpg", "png", "jpeg", "webp"],
-  },
+  }
 };
 
+// Main upload function - use in employee profile, product upload routes
 export const uploadToCloudinary = async (
-  filePath: string,
+  filePath: string, 
   options: any = {}
 ): Promise<any> => {
   if (!isCloudinaryConfigured()) {
-    throw new Error("Cloudinary is not configured");
+    throw new Error("Cloudinary not configured");
   }
 
   try {
-    console.log("🔄 Uploading to Cloudinary:", filePath);
+    console.log('Uploading file:', filePath);
     const result = await cloudinary.uploader.upload(filePath, options);
-    console.log("✅ Upload successful:", result.secure_url);
-
+    console.log('Upload done:', result.secure_url);
+    
     return {
       url: result.secure_url,
       publicId: result.public_id,
@@ -134,36 +98,40 @@ export const uploadToCloudinary = async (
       bytes: result.bytes,
     };
   } catch (error: any) {
-    console.error("❌ Cloudinary upload failed:", error.message);
+    console.error('Upload failed:', error.message);
     throw error;
   }
 };
 
+// Delete single file - profile pic cleanup
 export const deleteFromCloudinary = async (
   publicId: string,
   resourceType: "image" | "video" | "raw" = "image"
 ): Promise<boolean> => {
   if (!isCloudinaryConfigured()) {
-    throw new Error("Cloudinary is not configured");
+    throw new Error("Cloudinary not configured");
   }
 
   const result = await cloudinary.uploader.destroy(publicId, {
     resource_type: resourceType,
   });
+  console.log('Delete result:', result.result);
   return result.result === "ok";
 };
 
+// Bulk delete - cleanup old employee docs
 export const deleteMultipleFromCloudinary = async (
   publicIds: string[],
   resourceType: "image" | "video" | "raw" = "image"
 ): Promise<any> => {
   if (!isCloudinaryConfigured()) {
-    throw new Error("Cloudinary is not configured");
+    throw new Error("Cloudinary not configured");
   }
 
   const result = await cloudinary.api.delete_resources(publicIds, {
     resource_type: resourceType,
   });
+  console.log('Bulk delete done:', result);
   return result;
 };
 

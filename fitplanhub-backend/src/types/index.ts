@@ -1,13 +1,9 @@
-
-// ========================================
-// src/types/index.ts
-// ========================================
-import { Request } from 'express';
+import { Request } from "express";
 
 export interface AuthRequest extends Request {
   user?: {
     userId: string;
-    role: 'user' | 'trainer';
+    role: "user" | "trainer";
     email?: string;
   };
 }
@@ -16,7 +12,7 @@ export interface PaginationQuery {
   page?: string;
   limit?: string;
   sort?: string;
-  order?: 'asc' | 'desc';
+  order?: "asc" | "desc";
 }
 
 export interface UploadedFile {
@@ -53,26 +49,26 @@ export interface PaymentVerification {
 }
 
 export enum NotificationType {
-  FOLLOW = 'follow',
-  LIKE = 'like',
-  COMMENT = 'comment',
-  SUBSCRIPTION = 'subscription',
-  REVIEW = 'review',
-  MESSAGE = 'message',
-  REMINDER = 'reminder',
-  SYSTEM = 'system'
+  FOLLOW = "follow",
+  LIKE = "like",
+  COMMENT = "comment",
+  SUBSCRIPTION = "subscription",
+  REVIEW = "review",
+  MESSAGE = "message",
+  REMINDER = "reminder",
+  SYSTEM = "system",
 }
 
 export enum SubscriptionStatus {
-  ACTIVE = 'active',
-  EXPIRED = 'expired',
-  CANCELLED = 'cancelled',
-  PENDING = 'pending'
+  ACTIVE = "active",
+  EXPIRED = "expired",
+  CANCELLED = "cancelled",
+  PENDING = "pending",
 }
 
 export enum PaymentStatus {
-  CREATED = 'created',
-  PENDING = 'pending',
-  SUCCESS = 'success',
-  FAILED = 'failed'
+  CREATED = "created",
+  PENDING = "pending",
+  SUCCESS = "success",
+  FAILED = "failed",
 }

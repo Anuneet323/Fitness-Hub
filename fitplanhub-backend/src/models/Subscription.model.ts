@@ -1,7 +1,3 @@
-// ========================================
-// src/models/Subscription.model.ts
-// ========================================
-
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface ISubscription extends Document {

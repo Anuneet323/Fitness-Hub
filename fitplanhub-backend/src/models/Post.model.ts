@@ -1,7 +1,3 @@
-// ========================================
-// src/models/Post.model.ts
-// ========================================
-
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IComment {
@@ -23,7 +19,7 @@ export interface IPost extends Document {
   authorId: mongoose.Types.ObjectId;
   content: string;
   mediaUrls?: string[];
-  mediaType?: 'image' | 'video' | 'mixed';
+  mediaType?: "image" | "video" | "mixed";
   hashtags?: string[];
   mentions?: mongoose.Types.ObjectId[];
   likes: mongoose.Types.ObjectId[];
@@ -37,46 +33,54 @@ export interface IPost extends Document {
   updatedAt: Date;
 }
 
-const CommentSchema = new Schema<IComment>({
-  userId: { 
-    type: Schema.Types.ObjectId, 
-    ref: 'User', 
-    required: true 
+const CommentSchema = new Schema<IComment>(
+  {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    text: { type: String, required: true, trim: true },
+    likes: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    replies: [
+      {
+        userId: { type: Schema.Types.ObjectId, ref: "User" },
+        text: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
   },
-  text: { type: String, required: true, trim: true },
-  likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-  replies: [{
-    userId: { type: Schema.Types.ObjectId, ref: 'User' },
-    text: { type: String, required: true },
-    createdAt: { type: Date, default: Date.now }
-  }]
-}, { timestamps: true });
+  { timestamps: true }
+);
 
-const PostSchema = new Schema<IPost>({
-  authorId: { 
-    type: Schema.Types.ObjectId, 
-    ref: 'User', 
-    required: true 
+const PostSchema = new Schema<IPost>(
+  {
+    authorId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    content: { type: String, required: true, trim: true },
+    mediaUrls: [{ type: String }],
+    mediaType: {
+      type: String,
+      enum: ["image", "video", "mixed"],
+    },
+    hashtags: [{ type: String }],
+    mentions: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    likes: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    likesCount: { type: Number, default: 0 },
+    comments: [CommentSchema],
+    commentsCount: { type: Number, default: 0 },
+    shares: { type: Number, default: 0 },
+    isPublic: { type: Boolean, default: true },
+    isPinned: { type: Boolean, default: false },
   },
-  content: { type: String, required: true, trim: true },
-  mediaUrls: [{ type: String }],
-  mediaType: { 
-    type: String, 
-    enum: ['image', 'video', 'mixed'] 
-  },
-  hashtags: [{ type: String }],
-  mentions: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-  likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-  likesCount: { type: Number, default: 0 },
-  comments: [CommentSchema],
-  commentsCount: { type: Number, default: 0 },
-  shares: { type: Number, default: 0 },
-  isPublic: { type: Boolean, default: true },
-  isPinned: { type: Boolean, default: false }
-}, { timestamps: true });
+  { timestamps: true }
+);
 
 PostSchema.index({ authorId: 1, createdAt: -1 });
 PostSchema.index({ hashtags: 1 });
 PostSchema.index({ likesCount: -1 });
 
-export const Post = mongoose.model<IPost>('Post', PostSchema);
+export const Post = mongoose.model<IPost>("Post", PostSchema);

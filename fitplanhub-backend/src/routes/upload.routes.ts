@@ -1,6 +1,4 @@
-// ========================================
-// src/routes/upload.routes.ts
-// ========================================
+// Upload routes
 import { Router } from "express";
 import * as uploadController from "../controllers/upload.controller";
 import { authenticate, authorizeTrainer } from "../middleware/auth.middleware";
@@ -9,17 +7,16 @@ import { uploadLimiter } from "../middleware/rateLimiter.middleware";
 
 const router = Router();
 
-// Apply rate limiting to all upload routes
+// Rate limit all uploads
 router.use(uploadLimiter);
 
-// User uploads
+// User profile uploads
 router.post(
   "/avatar",
   authenticate,
   upload.single("file"),
   uploadController.uploadAvatar
 );
-
 router.post(
   "/cover",
   authenticate,
@@ -27,7 +24,7 @@ router.post(
   uploadController.uploadCoverImage
 );
 
-// Trainer uploads
+// Trainer plan uploads
 router.post(
   "/plan-thumbnail",
   authenticate,
@@ -35,7 +32,6 @@ router.post(
   upload.single("file"),
   uploadController.uploadPlanThumbnail
 );
-
 router.post(
   "/plan-image",
   authenticate,
@@ -43,8 +39,6 @@ router.post(
   upload.single("file"),
   uploadController.uploadPlanImage
 );
-
-// Generic plan-media route that handles both
 router.post(
   "/plan-media",
   authenticate,
@@ -53,22 +47,19 @@ router.post(
   uploadController.uploadPlanImage
 );
 
-// Post uploads
+// Post/media uploads
 router.post(
   "/post-media",
   authenticate,
   upload.single("file"),
   uploadController.uploadPostMedia
 );
-
 router.post(
   "/multiple",
   authenticate,
   upload.array("files", 5),
   uploadController.uploadMultiple
 );
-
-// Video uploads
 router.post(
   "/video",
   authenticate,
@@ -76,7 +67,7 @@ router.post(
   uploadController.uploadVideo
 );
 
-// Delete file
+// Delete files
 router.delete("/:publicId", authenticate, uploadController.deleteFile);
 
 export default router;

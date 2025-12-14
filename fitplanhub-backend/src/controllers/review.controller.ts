@@ -1,7 +1,6 @@
-// ========================================
-// src/controllers/review.controller.ts
-// ========================================
+// Review controller
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import { Review } from "../models/Review.model";
 import { Plan } from "../models/Plan.model";
 import { Subscription } from "../models/Subscription.model";
@@ -21,9 +20,7 @@ export const createReview = async (req: Request, res: Response) => {
     });
 
     if (!subscription) {
-      return res
-        .status(403)
-        .json({ message: "You must subscribe to this plan to leave a review" });
+      return res.status(403).json({ message: "Must subscribe to review" });
     }
 
     const existingReview = await Review.findOne({
@@ -32,9 +29,7 @@ export const createReview = async (req: Request, res: Response) => {
     });
 
     if (existingReview) {
-      return res
-        .status(400)
-        .json({ message: "You have already reviewed this plan" });
+      return res.status(400).json({ message: "Already reviewed" });
     }
 
     const review = await Review.create({
@@ -47,10 +42,8 @@ export const createReview = async (req: Request, res: Response) => {
       isVerifiedPurchase: true,
     });
 
-    // Update plan average rating
     const reviews = await Review.find({ planId });
-    const avgRating =
-      reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+    const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
 
     await Plan.findByIdAndUpdate(planId, {
       averageRating: avgRating,
@@ -62,12 +55,9 @@ export const createReview = async (req: Request, res: Response) => {
       "name avatarUrl"
     );
 
-    res.status(201).json({
-      message: "Review submitted successfully",
-      review: populatedReview,
-    });
+    res.status(201).json({ message: "Review created", review: populatedReview });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -96,7 +86,7 @@ export const getPlanReviews = async (req: Request, res: Response) => {
       total,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -107,33 +97,31 @@ export const markReviewHelpful = async (req: Request, res: Response) => {
     }
 
     const { id } = req.params;
-
     const review = await Review.findById(id);
     if (!review) {
       return res.status(404).json({ message: "Review not found" });
     }
 
+    const userId = new mongoose.Types.ObjectId(req.user.userId);
     const alreadyMarked = review.helpful.some(
-      (uid) => uid.toString() === req.user!.userId
+      (uid) => uid.toString() === req.user.userId
     );
 
     if (alreadyMarked) {
-      review.helpful = review.helpful.filter(
-        (uid) => uid.toString() !== req.user!.userId
-      );
+      review.helpful = review.helpful.filter((uid) => uid.toString() !== req.user.userId);
       review.helpfulCount = Math.max(0, review.helpfulCount - 1);
     } else {
-      review.helpful.push(req.user.userId as any);
+      review.helpful.push(userId);
       review.helpfulCount += 1;
     }
 
     await review.save();
 
     res.json({
-      message: alreadyMarked ? "Removed helpful mark" : "Marked as helpful",
+      message: alreadyMarked ? "Unmarked helpful" : "Marked helpful",
       helpfulCount: review.helpfulCount,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };

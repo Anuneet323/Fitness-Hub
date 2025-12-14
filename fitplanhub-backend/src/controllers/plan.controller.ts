@@ -1,19 +1,11 @@
-// ========================================
-// src/controllers/plan.controller.ts
-// ========================================
+// Plan controller
 import { Request, Response } from "express";
 import { Plan } from "../models/Plan.model";
 
 export const createPlan = async (req: Request, res: Response) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    if (req.user.role !== "trainer") {
-      return res
-        .status(403)
-        .json({ message: "Only trainers can create plans" });
+    if (!req.user || req.user.role !== "trainer") {
+      return res.status(403).json({ message: "Trainer only" });
     }
 
     const planData = {
@@ -22,9 +14,9 @@ export const createPlan = async (req: Request, res: Response) => {
     };
 
     const plan = await Plan.create(planData);
-    res.status(201).json({ message: "Plan created successfully", plan });
+    res.status(201).json({ message: "Plan created", plan });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -74,7 +66,7 @@ export const getAllPlans = async (req: Request, res: Response) => {
       total,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -92,7 +84,7 @@ export const getPlanById = async (req: Request, res: Response) => {
 
     res.json({ plan });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -105,11 +97,7 @@ export const updatePlan = async (req: Request, res: Response) => {
     const { id } = req.params;
     const plan = await Plan.findById(id);
 
-    if (!plan) {
-      return res.status(404).json({ message: "Plan not found" });
-    }
-
-    if (plan.trainerId.toString() !== req.user.userId) {
+    if (!plan || plan.trainerId.toString() !== req.user.userId) {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
@@ -119,9 +107,9 @@ export const updatePlan = async (req: Request, res: Response) => {
       { new: true, runValidators: true }
     );
 
-    res.json({ message: "Plan updated successfully", plan: updatedPlan });
+    res.json({ message: "Plan updated", plan: updatedPlan });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -134,18 +122,14 @@ export const deletePlan = async (req: Request, res: Response) => {
     const { id } = req.params;
     const plan = await Plan.findById(id);
 
-    if (!plan) {
-      return res.status(404).json({ message: "Plan not found" });
-    }
-
-    if (plan.trainerId.toString() !== req.user.userId) {
+    if (!plan || plan.trainerId.toString() !== req.user.userId) {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
     await Plan.findByIdAndDelete(id);
-    res.json({ message: "Plan deleted successfully" });
+    res.json({ message: "Plan deleted" });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -160,6 +144,6 @@ export const getMyPlans = async (req: Request, res: Response) => {
     });
     res.json({ plans });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };

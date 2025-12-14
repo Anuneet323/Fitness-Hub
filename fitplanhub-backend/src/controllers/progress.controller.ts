@@ -1,6 +1,4 @@
-// ========================================
-// src/controllers/progress.controller.ts
-// ========================================
+// Progress controller
 import { Request, Response } from "express";
 import { Progress } from "../models/Progress.model";
 
@@ -31,9 +29,9 @@ export const logProgress = async (req: Request, res: Response) => {
     }
 
     const progress = await Progress.create(progressData);
-    res.status(201).json({ message: "Progress logged successfully", progress });
+    res.status(201).json({ message: "Progress logged", progress });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -59,7 +57,7 @@ export const getMyProgress = async (req: Request, res: Response) => {
 
     res.json({ progress });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -76,6 +74,10 @@ export const getProgressStats = async (req: Request, res: Response) => {
       planId,
     }).sort({ date: 1 });
 
+    if (progress.length === 0) {
+      return res.json({ stats: {}, progress: [] });
+    }
+
     const stats = {
       totalEntries: progress.length,
       weightChange:
@@ -85,18 +87,18 @@ export const getProgressStats = async (req: Request, res: Response) => {
           : 0,
       avgCalories:
         progress.reduce((sum, p) => sum + (p.calories || 0), 0) /
-          progress.length || 0,
+        progress.length,
       totalWorkouts: progress.reduce(
         (sum, p) => sum + (p.workoutsDone || 0),
         0
       ),
       avgWorkoutDuration:
         progress.reduce((sum, p) => sum + (p.workoutDuration || 0), 0) /
-          progress.length || 0,
+        progress.length,
     };
 
     res.json({ stats, progress });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Server error" });
   }
 };

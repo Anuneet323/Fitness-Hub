@@ -1,26 +1,23 @@
-
-// ========================================
-// src/services/payment.service.ts
-// ========================================
-import { 
-  createRazorpayOrder, 
-  verifyRazorpaySignature, 
+// Payment service wrapper
+import {
+  createRazorpayOrder,
+  verifyRazorpaySignature,
   fetchPaymentDetails,
-  refundPayment 
-} from '../config/razorpay';
-import { Payment } from '../models/Payment.model';
+  refundPayment,
+} from "../config/razorpay";
+import { Payment } from "../models/Payment.model";
 
 export const paymentService = {
   createOrder: async (
     userId: string,
     planId: string,
     amount: number,
-    currency: string = 'INR'
+    currency: string = "INR"
   ) => {
     const receipt = `rcpt_${Date.now()}`;
     const order = await createRazorpayOrder(amount, currency, receipt, {
       userId,
-      planId
+      planId,
     });
 
     const payment = await Payment.create({
@@ -29,8 +26,8 @@ export const paymentService = {
       razorpayOrderId: order.orderId,
       amount,
       currency,
-      status: 'created',
-      receipt
+      status: "created",
+      receipt,
     });
 
     return { order, payment };
@@ -42,15 +39,15 @@ export const paymentService = {
     signature: string
   ) => {
     const isValid = verifyRazorpaySignature(orderId, paymentId, signature);
-    
+
     if (isValid) {
       await Payment.findOneAndUpdate(
         { razorpayOrderId: orderId },
         {
           razorpayPaymentId: paymentId,
           razorpaySignature: signature,
-          status: 'success',
-          paymentStatus: 'paid'
+          status: "success",
+          paymentStatus: "paid",
         }
       );
     }
@@ -64,5 +61,5 @@ export const paymentService = {
 
   processRefund: async (paymentId: string, amount?: number) => {
     return await refundPayment(paymentId, amount);
-  }
+  },
 };

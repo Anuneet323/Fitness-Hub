@@ -1,14 +1,10 @@
-
-// ========================================
-// src/services/email.service.ts
-// ========================================
-import { 
-  sendWelcomeEmail, 
-  sendSubscriptionEmail, 
+// Email service wrapper
+import {
+  sendWelcomeEmail,
+  sendSubscriptionEmail,
   sendPasswordResetEmail,
   sendSubscriptionReminderEmail,
-  sendWorkoutReminderEmail
-} from '../config/email';
+} from "../config/email";
 
 export const emailService = {
   sendWelcome: async (email: string, name: string) => {
@@ -34,10 +30,11 @@ export const emailService = {
     planTitle: string,
     daysLeft: number
   ) => {
-    return await sendSubscriptionReminderEmail(email, name, planTitle, daysLeft);
+    return await sendSubscriptionReminderEmail(
+      email,
+      name,
+      planTitle,
+      daysLeft
+    );
   },
-
-  sendWorkoutReminder: async (email: string, name: string) => {
-    return await sendWorkoutReminderEmail(email, name);
-  }
 };

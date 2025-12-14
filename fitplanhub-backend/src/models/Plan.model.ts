@@ -1,8 +1,4 @@
-// ========================================
-// src/models/Plan.model.ts
-// ========================================
-
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document } from "mongoose";
 
 export interface IPlan extends Document {
   trainerId: mongoose.Types.ObjectId;
